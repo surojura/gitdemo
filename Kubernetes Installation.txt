@@ -1,0 +1,436 @@
+sudo su –
+swapoff  -a
+sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+apt update –y
+
+apt install -y apt-transport-https –y
+
+
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+
+apt update –y
+
+apt install -y kubelet kubeadm containerd kubectl
+
+apt-mark hold kubelet kubeadm kubectl containerd
+
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF
+
+modprobe br_netfilter
+
+modprobe br_netfilter
+
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-iptables = 1
+net.bridge.bridge-nf-call-ip6tables = 10
+net.ipv4.ip_forward = 1
+EOF
+
+Configure Containerd
+Marking containerd as the default runtime
+
+mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+systemctl  restart  containerd
+
+Start and enable kubelet.service
+systemctl daemon-reload
+systemctl start kubelet
+systemctl enable kubelet.service
+
+It is just a master server
+----------------------------------------------------------------------------
+Run the following steps only in Master server
+
+run these commands run as a root user
+
+$ sudo su -
+
+# kubeadm init
+
+kubeadm init --control-plane-endpoint "Public IP:6443"
+
+exit
+
+$ 
+mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+/etc/kubernetes/admin.conf
+this file contains all cluster details API server, on which port API server is
+running
+Certification for authentication
+
+To check the master setup or not
+ubuntu@ip-172-31-42-137:~$ kubectl get nodes
+NAME               STATUS     ROLES           AGE   VERSION
+ip-172-31-42-137   NotReady   control-plane   24h   v1.26.3
+ubuntu@ip-172-31-42-137:~$
+
+K8s--> CNI(Container Network Interface)
+
+$ kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+
+kubectl get pods -n kube-system -o wide
+-----------------------------Master setup is done--------------------------
+
+Kubernetes Objects / API /Workloads
+Kubernetes Objects used to represent the state of cluster
+
+Objects
+pod
+replication controller
+replicaset
+daemonset
+Service
+  ClusterIP
+  NodePort
+Volume
+Job
+
+ubuntu@ip-172-31-40-120:~$ kubectl  get nodes
+NAME               STATUS     ROLES           AGE   VERSION
+ip-172-31-0-176    NotReady   <none>          10d   v1.26.3
+ip-172-31-40-120   Ready      control-plane   10d   v1.26.3
+ip-172-31-6-231    NotReady   <none>          10d   v1.26.3
+
+In Kubernetes everything is a resource or objects
+
+To see all the resources in Kuberentes Cluster
+ubuntu@ip-172-31-40-120:~$ kubectl api-resources
+
+Kubernetes is the container orchestration software
+But it cannot manage the containers directly
+The containers are managed by pods
+within the pods we've containers
+
+Kubernetes can schedule and manage the pods
+
+pod
+resourcequota
+replication controller
+replicaset
+daemonset
+Deployment
+Service
+  ClusterIP
+  NodePort
+  Headless
+  Loadbalancer
+ConfigMap
+Secrets
+Statefulset
+Persistant Volume
+PersistantvolumeClaim
+Role
+RoleBinding
+ClusterRole
+ClusterRolebinding
+ServiceAccount
+Ingress
+Job
+Namespace(NS)
+
+Namespaces
+------------
+What is namespace
+Namespace is the virtual cluster inside your kubernetes cluster
+You can have multiple namespaces inside the Kubernetes cluster
+These namespaces are logically isolated from each other
+
+By default there are 4 namespaces
+
+
+To see the namespaces
+ubuntu@ip-172-31-40-120:~$ kubectl get namespaces
+NAME              STATUS   AGE
+default           Active   10d
+kube-node-lease   Active   10d
+kube-public       Active   10d
+kube-system       Active   10d
+$ kubectl get ns
+
+How to create the namespace
+kubectl get namespace
+kubectl create namespace test1-ns
+
+Namespace is the virtual cluster in K8 cluster
+
+Team-A Products (products-ns)
+Dhatri, sowjanya, venkatesh
+  pod
+  services
+  deployments
+  configmap
+  secrets
+
+
+
+Team-B orders (orders-ns)
+saikrishna, sameera, ramya
+  pod
+  services
+  deployments
+  configmap
+  secrets
+
+Create the resourcequota for namespace
+
+product-ns --> namespace
+apiVersion: v1
+   kind: ResourceQuota
+   metadata: 
+      name: pods-high
+      namespace: product-ns
+   spec:
+     hard:
+       cpu: "1"
+       memory: 2Gi
+       pods: "1"
+
+
+To get all the kubenetes resources in the cluster namespace kube-system
+$ kubectl get all -n kube-system
+
+
+1. Imperative(Directly using command with options)
+
+2. manifestfile(Declarative)
+
+Imperative
+   Ex: kubectl create ns test-ns
+       kubectl create ns promotions-ns
+       kubectl create ns payments-ns
+
+Manifest file(Declarative)
+apiVersion: v1
+   kind: Namespace
+   metadata: 
+      name: pods-high
+      namespace: product-ns
+
+To check the what is the API version
+$ kubectl api-resources
+
+kubectl apply -f <filname>.yml
+                          .yaml
+Yet Another Markup Language
+
+
+
+The most commonly and widely used in k8 cluster i.e declarative in the form of
+yaml
+
+These manifest file we can maintain in version control system
+As CI/CD CREATE, UPDATE, DELETE these resources in K8 cluster
+
+Kubenetes Objects
+POD --> it runs on node
+
+A pod is the smallest building block or basic unit of scheduling in Kubernetes
+
+In a POD you can have one or more containers
+those containers share unique network ip, storage, and the other application 
+
+A POD is a group of one or more containers which will be running on any node
+
+Namespace is the virtual cluster in K8 Cluster(group of nodes)
+
+To create the name space
+kubectl  create  ns test-ns
+
+How to see the namespace
+	kubectl  get ns
+
+How to see the cluster IP address
+	kubectl  get all
+
+To get the resources from namespace
+	kubectl  get all -n test-ns
+
+docker and Kubernetes
+
+Kubernetes is container orchestration system
+
+Can I schedule the containers directly in K8
+Ans: No
+
+there is something called POD
+
+POD will schedule to the nodes can be master or worker nodes
+
+etcd --> database
+
+schedular	--> will schedule and unshedule the PODS
+
+Cluster has a nodes
+nodes has pods
+container under pods
+
+1 pod --> 1 node
+2 pod --> 2d node
+
+Q. If there are multiple containers on the same POD, what is common for all containers
+     1. Netwrok address	2. storage
+ 
+	172.10.3.0
+
+Q. If I've two containers in one POD, does the both containers IP address is same or not
+Ans: The IP is same
+
+	POD1
+
+	CONT1		CONT2		
+	/test		/data		/home/student/vol1
+
+
+Q. Who is manging the IP address and communtication in the POD 
+Ans: CNI(Container Network Interface)
+
+wiew net will allocate the IP address to the POD's
+
+To deploy the pods, create the pods and update pods --> Control Plane in Master
+
+API server
+schedular
+kubelet  --> create the pod in any one of the node in the cluster
+
+kubelet listen the instructions and execute the container related commands
+
+Imperative way
+--------------
+	kubectl  run nginx-demo  --image=nginx  --port=80
+                     POD name            image
+
+kubectl run mavenwebapppod  --image=oxsenit1/maven-web-app:5  --port=8080
+
+$ kubectl get pods
+
+$ kubectl describe pod
+
+$ kubectl  get pods -o wide
+
+
+In the realtime it is not recommended to use POD IP's
+Becoz POD IP's are dynamic
+
+If there is application running on more than one pod
+configure Load balancer
+
+se --> one of the resources
+A service is responsible for making our pods dicoverable inside the network
+A service identifies PODS by it's labels and selector
+
+
+
+kubectl  api-resources
+
+There are different types of services
+  1. Cluster IP address  --> default type
+
+You cannot create the containers in K8
+create the pods for creating containers, here pods are the process
+
+In K8 service makes accessbile inside the cluster or outside the cluster
+
+
+ClusterIP --> This is reachable from within the cluster and this is the default type
+
+when you create the service you'll get one m ore IP address that is called 
+cluster IP(Virtual IP), it will registered to DNS(kube-dns)
+
+kubectl  get pods  -n kube-system
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginxsvc
+
+service is the logical concept, the real work is being done by kube-proxy
+
+what is endpoints
+endpoints are nothing but POD IP's
+
+labels
+
+If the service doesn't have any endpoint or any pods the service will not work
+
+To see the labels for pods
+ kubectl  get pods --show-labels
+
+run is the key
+mavenwebapppod is the value
+
+Imperative way
+-------------
+To create the service
+kubectl  expose rc nginx --port=80 --target-port=8080
+
+kubectl  expose mavenwebapppod  --port=80 --target-port=8000 --name=mavenwebsvc
+
+target-port  --> container port
+
+Declarative way
+--------------
+apiVersion: v1
+kind: Service
+metadata:
+   name: <serviceName>
+   namespace: <nameSpace>
+spec:
+   type: <clusterIP/NodePort/Loadbalancer>
+   selector:    # POD labels has to be used as selector
+			the service will identify the pods, based on the labels and selectors
+   <key>:value
+    app: mavenwebapp
+ports:
+  -port: <servicePort>	# if anyone is contacting this service on this port, the request will 
+                          forward to the container port
+   targetPorts: <containerPort> 
+   
+kubectl  run  mavenwebapppod  --image=oxsenit1/maven-web-app:1 --port=8080 
+
+To delete the pod
+kubectl  delete pod mavenwebapppod
+
+$ vi mavenwebapppod
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: mavenwebapp
+  name: mavenwebapppod
+spec:
+  containers:
+  - image: oxsenit1/maven-web-app:5
+    name: mavenwebapppod
+    ports:
+    - containerPort: 8080
+
+To run the YAML file
+ kubectl apply -f mavenwebapppod.yml
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
